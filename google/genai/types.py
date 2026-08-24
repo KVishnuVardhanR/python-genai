@@ -26,6 +26,7 @@ import sys
 import types as builtin_types
 import typing
 from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Sequence, Union, _UnionGenericAlias  # type: ignore
+import warnings
 import pydantic
 from pydantic import ConfigDict, Field, PrivateAttr, WrapValidator, model_validator
 from typing_extensions import Self, TypedDict
@@ -21660,6 +21661,10 @@ If included the server will send SessionResumptionUpdate messages.""",
   translation_config: Optional[TranslationConfig] = Field(
       default=None, description="""Config for translation."""
   )
+  save_live_blob: bool = Field(
+      default=False,
+      description="""Saves live video and audio data to session and artifact service.""",
+  )
 
 
 class LiveConnectConfigDict(TypedDict, total=False):
@@ -21780,6 +21785,36 @@ If included the server will send SessionResumptionUpdate messages."""
 
   translation_config: Optional[TranslationConfigDict]
   """Config for translation."""
+
+  save_live_blob: Optional[bool]
+  """Saves live video and audio data to session and artifact service."""
+
+
+class RealtimeCacheEntry(_common.BaseModel):
+  """Entry for caching realtime audio/video chunks."""
+
+  role: str = Field(description="The role of the participant ('user' or 'model').")
+  data: Blob = Field(description="The audio/video chunk data.")
+  timestamp: float = Field(
+      description="Timestamp in seconds when the chunk was received or generated."
+  )
+
+
+class AudioCacheConfig(_common.BaseModel):
+  """Configuration for audio caching behavior."""
+
+  max_cache_size_bytes: int = Field(
+      default=10 * 1024 * 1024,
+      description="Maximum cache size in bytes before auto-flush.",
+  )
+  max_cache_duration_seconds: float = Field(
+      default=300.0,
+      description="Maximum duration to keep data in cache.",
+  )
+  auto_flush_threshold: int = Field(
+      default=100,
+      description="Number of chunks that triggers auto-flush.",
+  )
 
 
 LiveConnectConfigOrDict = Union[LiveConnectConfig, LiveConnectConfigDict]
